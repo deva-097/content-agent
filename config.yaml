@@ -1,0 +1,69 @@
+scout:
+  sources:
+    blogs:
+      - url: "https://stratechery.com/feed/"
+        type: rss
+        label: "Stratechery"
+      - url: "https://www.oneusefulthing.org/feed"
+        type: rss
+        label: "One Useful Thing"
+      # Add more RSS feeds / blogs here:
+      # - url: "https://example.com/feed/"
+      #   type: rss
+      #   label: "Example Blog"
+      # - url: "https://example.com/blog"
+      #   type: blog
+      #   label: "Example (no RSS)"
+    newsletters: []
+    podcasts: []
+
+  topics:
+    - "AI agents enterprise adoption"
+    - "SaaS strategy 2026"
+    - "management consulting AI transformation"
+    - "generative AI product development"
+
+  max_items_per_source: 10
+  llm_model: "claude-haiku-4-5-20251001"
+
+mirror:
+  chrome_history_path: "~/Library/Application Support/Google/Chrome/Default/History"
+
+  exclude_domains:
+    - "google.com"
+    - "mail.google.com"
+    - "accounts.google.com"
+    - "localhost"
+    - "chrome://"
+    - "chrome-extension://"
+    - "new-tab-page"
+
+  productive_domains:
+    - "arxiv.org"
+    - "hbr.org"
+    - "stratechery.com"
+    - "oneusefulthing.org"
+    - "github.com"
+    - "stackoverflow.com"
+    - "medium.com"
+    - "substack.com"
+
+  waste_domains:
+    - "youtube.com"
+    - "amazon.in"
+    - "amazon.com"
+    - "flipkart.com"
+    - "myntra.com"
+    - "reddit.com"
+
+  min_visit_duration_seconds: 30
+  llm_model: "claude-haiku-4-5-20251001"
+
+scribe:
+  output_dir: "~/Documents/Obsidian Vault/Haven/Content/Drafts"
+  linkedin_max_words: 300
+  llm_model: "claude-sonnet-4-20250514"
+
+email:
+  env_prefix: "CONTENT_AGENT"
+  dry_run: false

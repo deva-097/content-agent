@@ -1,0 +1,122 @@
+"""Read Chrome browsing history from the local SQLite database."""
+
+from __future__ import annotations
+
+import shutil
+import sqlite3
+import tempfile
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from urllib.parse import urlparse
+
+from src.common.logger import get_logger
+
+LOGGER = get_logger(__name__)
+
+# Chrome stores timestamps as microseconds since 1601-01-01 00:00:00 UTC
+_CHROME_EPOCH = datetime(1601, 1, 1, tzinfo=timezone.utc)
+
+
+def chrome_time_to_datetime(chrome_time: int) -> datetime:
+    """Convert Chrome's WebKit timestamp to Python datetime."""
+    if chrome_time <= 0:
+        return _CHROME_EPOCH
+    return _CHROME_EPOCH + timedelta(microseconds=chrome_time)
+
+
+def datetime_to_chrome_time(dt: datetime) -> int:
+    """Convert Python datetime to Chrome's WebKit timestamp."""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return int((dt - _CHROME_EPOCH).total_seconds() * 1_000_000)
+
+
+def read_history(
+    since: datetime | None,
+    config: dict,
+) -> list[dict]:
+    """Copy Chrome History DB to temp location, query, return results.
+
+    Chrome locks its DB while running, so we copy it first.
+    """
+    source = Path(config["mirror"]["chrome_history_path"]).expanduser()
+    if not source.exists():
+        LOGGER.error("Chrome History DB not found at %s", source)
+        return []
+
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=".db")
+    tmp_file = Path(tmp_path)
+
+    try:
+        shutil.copy2(source, tmp_file)
+        LOGGER.info("Copied Chrome History DB to %s", tmp_file)
+
+        conn = sqlite3.connect(f"file:{tmp_file}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+
+        if since:
+            chrome_since = datetime_to_chrome_time(since)
+        else:
+            # Default: last 14 days if no prior run
+            fallback = datetime.now(timezone.utc) - timedelta(days=14)
+            chrome_since = datetime_to_chrome_time(fallback)
+
+        query = """
+            SELECT
+                u.url,
+                u.title,
+                u.visit_count,
+                v.visit_time,
+                v.visit_duration
+            FROM urls u
+            JOIN visits v ON u.id = v.url
+            WHERE v.visit_time > ?
+            ORDER BY v.visit_time DESC
+        """
+        rows = conn.execute(query, (chrome_since,)).fetchall()
+        conn.close()
+
+        # Filter out excluded domains
+        exclude = set(config["mirror"].get("exclude_domains", []))
+        results = []
+        for row in rows:
+            url = row["url"]
+            if _should_exclude(url, exclude):
+                continue
+
+            visit_time = chrome_time_to_datetime(row["visit_time"])
+            # visit_duration is in microseconds
+            duration_secs = (row["visit_duration"] or 0) / 1_000_000
+
+            results.append({
+                "url": url,
+                "title": row["title"] or "",
+                "visit_count": row["visit_count"],
+                "visit_time": visit_time,
+                "duration_seconds": duration_secs,
+                "domain": urlparse(url).netloc,
+            })
+
+        LOGGER.info(
+            "Read %d history entries (filtered from %d raw rows)",
+            len(results), len(rows),
+        )
+        return results
+
+    except Exception as e:
+        LOGGER.error("Failed to read Chrome history: %s", e)
+        return []
+    finally:
+        tmp_file.unlink(missing_ok=True)
+
+
+def _should_exclude(url: str, exclude_domains: set[str]) -> bool:
+    """Check if a URL should be excluded based on domain rules."""
+    for pattern in exclude_domains:
+        if pattern.endswith("://"):
+            # Scheme-based exclusion (e.g. "chrome://")
+            if url.startswith(pattern):
+                return True
+        elif pattern in url:
+            return True
+    return False

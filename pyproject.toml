@@ -1,0 +1,24 @@
+[project]
+name = "content-agent"
+version = "0.1.0"
+description = "Personal content pipeline: discover, analyze, and draft content"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.40.0",
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0",
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "click>=8.1.0",
+    "jinja2>=3.1.0",
+    "feedparser>=6.0.0",
+    "ddgs>=9.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+content-agent = "cli.main:cli"
