@@ -1,19 +1,55 @@
 scout:
   sources:
     blogs:
+      # --- Already in your reading diet (from browsing audit) ---
       - url: "https://stratechery.com/feed/"
         type: rss
-        label: "Stratechery"
+        label: "Stratechery (Ben Thompson)"
       - url: "https://www.oneusefulthing.org/feed"
         type: rss
-        label: "One Useful Thing"
-      # Add more RSS feeds / blogs here:
-      # - url: "https://example.com/feed/"
-      #   type: rss
-      #   label: "Example Blog"
-      # - url: "https://example.com/blog"
-      #   type: blog
-      #   label: "Example (no RSS)"
+        label: "One Useful Thing (Ethan Mollick)"
+      - url: "https://simonwillison.net/atom/everything/"
+        type: rss
+        label: "Simon Willison"
+      - url: "https://www.henrikkarlsson.xyz/feed"
+        type: rss
+        label: "Henrik Karlsson (Escaping Flatland)"
+      - url: "https://every.to/feed.xml"
+        type: rss
+        label: "Every.to"
+      - url: "https://fahadhasin.substack.com/feed"
+        type: rss
+        label: "Fahad Hasin (Intellectual Sonder)"
+      - url: "https://mitchellh.com/feed.xml"
+        type: rss
+        label: "Mitchell Hashimoto"
+
+      # --- Blind spots from audit: strategy & consulting depth ---
+      - url: "https://hbr.org/the-latest"
+        type: blog
+        label: "Harvard Business Review"
+      - url: "https://rogermartin.medium.com/feed"
+        type: rss
+        label: "Roger Martin"
+
+      # --- AI/ML depth beyond ChatGPT ---
+      - url: "https://www.anthropic.com/research/feed.xml"
+        type: rss
+        label: "Anthropic Research"
+      - url: "https://openai.com/blog/rss.xml"
+        type: rss
+        label: "OpenAI Blog"
+      - url: "https://lilianweng.github.io/index.xml"
+        type: rss
+        label: "Lil'Log (Lilian Weng)"
+
+      # --- SaaS / startup strategy ---
+      - url: "https://www.lennysnewsletter.com/feed"
+        type: rss
+        label: "Lenny's Newsletter"
+      - url: "https://www.notboring.co/feed"
+        type: rss
+        label: "Not Boring (Packy McCormick)"
     newsletters: []
     podcasts: []
 

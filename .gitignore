@@ -15,9 +15,9 @@ env/
 # Environment variables (NEVER commit)
 .env
 
-# State database (local data)
-data/state.db
-data/logs/
+# Local data (state, logs, audits)
+data/*
+!data/.gitkeep
 
 # IDE
 .vscode/
