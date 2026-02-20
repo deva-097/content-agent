@@ -1,0 +1,61 @@
+scout:
+  sources:
+    blogs:
+      # Add your RSS feeds and blogs here
+      - url: "https://stratechery.com/feed/"
+        type: rss
+        label: "Stratechery"
+      - url: "https://www.oneusefulthing.org/feed"
+        type: rss
+        label: "One Useful Thing"
+      # - url: "https://example.com/feed/"
+      #   type: rss
+      #   label: "Your Favorite Blog"
+      # - url: "https://example.com/blog"
+      #   type: blog             # Use 'blog' for sites without RSS
+      #   label: "Another Blog"
+    newsletters: []
+    podcasts: []
+
+  topics:
+    - "AI agents enterprise adoption"
+    - "SaaS strategy"
+    - "your topic here"
+
+  max_items_per_source: 10
+  llm_model: "claude-haiku-4-5-20251001"
+
+mirror:
+  chrome_history_path: "~/Library/Application Support/Google/Chrome/Default/History"
+
+  exclude_domains:
+    - "google.com"
+    - "mail.google.com"
+    - "accounts.google.com"
+    - "localhost"
+    - "chrome://"
+    - "chrome-extension://"
+    - "new-tab-page"
+
+  productive_domains:
+    - "arxiv.org"
+    - "hbr.org"
+    - "github.com"
+    - "stackoverflow.com"
+
+  waste_domains:
+    - "youtube.com"
+    - "amazon.com"
+    - "reddit.com"
+
+  min_visit_duration_seconds: 30
+  llm_model: "claude-haiku-4-5-20251001"
+
+scribe:
+  output_dir: "~/Documents/your-drafts-folder"
+  linkedin_max_words: 300
+  llm_model: "claude-sonnet-4-20250514"
+
+email:
+  env_prefix: "CONTENT_AGENT"
+  dry_run: false

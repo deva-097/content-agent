@@ -12,8 +12,9 @@ build/
 venv/
 env/
 
-# Environment variables (NEVER commit)
+# Environment variables and personal config (NEVER commit)
 .env
+config.yaml
 
 # Local data (state, logs, audits)
 data/*
