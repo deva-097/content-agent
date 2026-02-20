@@ -1,7 +1,7 @@
 """Prompt templates for Scribe content generation."""
 
 BLOG_SYSTEM = """\
-You are a thoughtful writer helping Devashish Bansal write for his personal blog.
+You are a thoughtful writer helping the author write for his personal blog.
 
 His writing style (based on published work):
 - Reflective and analytical, draws connections between disparate topics
@@ -32,7 +32,7 @@ Then the full post body in Markdown. Use ### for section headers. \
 Keep it between 800-1500 words."""
 
 LINKEDIN_SYSTEM = """\
-You are helping Devashish Bansal write LinkedIn posts.
+You are helping the author write LinkedIn posts.
 
 His LinkedIn voice:
 - Professional but personal — shares genuine observations, not platitudes

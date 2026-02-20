@@ -3,28 +3,28 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.devashish.content-agent.mirror</string>
+    <string>__LABEL__</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/devashishbansal/Documents/Claude_db/Projects_coding/content-agent/.venv/bin/python</string>
+        <string>__PROJECT_DIR__/.venv/bin/python</string>
         <string>-m</string>
         <string>cli.main</string>
-        <string>mirror</string>
+        <string>__COMMAND__</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/Users/devashishbansal/Documents/Claude_db/Projects_coding/content-agent</string>
+    <string>__PROJECT_DIR__</string>
     <key>StartCalendarInterval</key>
     <dict>
         <key>Weekday</key>
-        <integer>6</integer>
+        <integer>__WEEKDAY__</integer>
         <key>Hour</key>
-        <integer>10</integer>
+        <integer>__HOUR__</integer>
         <key>Minute</key>
         <integer>0</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>/Users/devashishbansal/Documents/Claude_db/Projects_coding/content-agent/data/logs/mirror.log</string>
+    <string>__PROJECT_DIR__/data/logs/__LOGNAME__.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/devashishbansal/Documents/Claude_db/Projects_coding/content-agent/data/logs/mirror.err</string>
+    <string>__PROJECT_DIR__/data/logs/__LOGNAME__.err</string>
 </dict>
 </plist>

@@ -27,6 +27,9 @@ data/*
 *.swo
 *~
 
+# Generated launchd plists (contain local paths)
+launchd/*.plist
+
 # macOS
 .DS_Store
 

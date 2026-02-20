@@ -4,31 +4,53 @@
 
 set -e
 
-PLIST_DIR="$HOME/Library/LaunchAgents"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PLIST_DIR="$HOME/Library/LaunchAgents"
+TEMPLATE="$SCRIPT_DIR/plist.template"
+PREFIX="com.content-agent"
+
+# Schedule definitions: label-suffix command weekday hour logname
+SCHEDULES=(
+    "scout-wed scout 3 19 scout-wed"
+    "scout-sat scout 6 9 scout-sat"
+    "mirror mirror 6 10 mirror"
+)
 
 echo "Installing content-agent schedules..."
+echo "  Project: $PROJECT_DIR"
+echo ""
 
-for plist in "$SCRIPT_DIR"/*.plist; do
-    name=$(basename "$plist")
-    target="$PLIST_DIR/$name"
+mkdir -p "$PROJECT_DIR/data/logs"
+
+for schedule in "${SCHEDULES[@]}"; do
+    read -r suffix command weekday hour logname <<< "$schedule"
+    label="${PREFIX}.${suffix}"
+    plist_file="$PLIST_DIR/${label}.plist"
 
     # Unload if already loaded
-    if launchctl list | grep -q "${name%.plist}" 2>/dev/null; then
-        echo "  Unloading existing $name..."
-        launchctl unload "$target" 2>/dev/null || true
+    if launchctl list 2>/dev/null | grep -q "$label"; then
+        echo "  Unloading existing $label..."
+        launchctl unload "$plist_file" 2>/dev/null || true
     fi
 
-    # Symlink and load
-    ln -sf "$plist" "$target"
-    launchctl load "$target"
-    echo "  Loaded $name"
+    # Generate plist from template
+    sed -e "s|__LABEL__|${label}|g" \
+        -e "s|__PROJECT_DIR__|${PROJECT_DIR}|g" \
+        -e "s|__COMMAND__|${command}|g" \
+        -e "s|__WEEKDAY__|${weekday}|g" \
+        -e "s|__HOUR__|${hour}|g" \
+        -e "s|__LOGNAME__|${logname}|g" \
+        "$TEMPLATE" > "$plist_file"
+
+    launchctl load "$plist_file"
+    echo "  Loaded $label (${command} — weekday ${weekday} at ${hour}:00)"
 done
 
 echo ""
 echo "Schedules installed:"
-echo "  Scout (Wed 7 PM)  — com.devashish.content-agent.scout-wed"
-echo "  Scout (Sat 9 AM)  — com.devashish.content-agent.scout-sat"
-echo "  Mirror (Sat 10 AM) — com.devashish.content-agent.mirror"
+echo "  Scout (Wed 7 PM)   — ${PREFIX}.scout-wed"
+echo "  Scout (Sat 9 AM)   — ${PREFIX}.scout-sat"
+echo "  Mirror (Sat 10 AM) — ${PREFIX}.mirror"
 echo ""
 echo "Verify with: launchctl list | grep content-agent"
