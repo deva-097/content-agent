@@ -62,7 +62,9 @@ def run_mirror(*, dry_run: bool = False) -> None:
         # 5. Save ideas to state DB
         for idea in ideas:
             context = idea.get("inspired_by", "")
-            state.save_content_idea("mirror", idea["title"], context)
+            if isinstance(context, list):
+                context = ", ".join(str(c) for c in context)
+            state.save_content_idea("mirror", idea["title"], str(context))
 
         # 6. Format + send report
         cost = llm.estimate_session_cost()
