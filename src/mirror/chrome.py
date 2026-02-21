@@ -85,8 +85,11 @@ def read_history(
                 continue
 
             visit_time = chrome_time_to_datetime(row["visit_time"])
-            # visit_duration is in microseconds
-            duration_secs = (row["visit_duration"] or 0) / 1_000_000
+            # visit_duration is in microseconds; cap at 30 min
+            duration_secs = min(
+                (row["visit_duration"] or 0) / 1_000_000,
+                1800,
+            )
 
             results.append({
                 "url": url,
@@ -96,6 +99,8 @@ def read_history(
                 "duration_seconds": duration_secs,
                 "domain": urlparse(url).netloc,
             })
+
+        results = _deduplicate_rapid_visits(results)
 
         LOGGER.info(
             "Read %d history entries (filtered from %d raw rows)",
@@ -108,6 +113,51 @@ def read_history(
         return []
     finally:
         tmp_file.unlink(missing_ok=True)
+
+
+def _deduplicate_rapid_visits(
+    results: list[dict],
+    window_seconds: int = 300,
+) -> list[dict]:
+    """Merge visits to the same URL that happen within *window_seconds*.
+
+    Tab-switching causes Chrome to log a new visit every time a tab regains
+    focus.  This collapses those into a single visit: earliest timestamp,
+    summed duration (already capped upstream), highest visit_count.
+    """
+    from collections import defaultdict
+
+    # Group by URL
+    by_url: dict[str, list[dict]] = defaultdict(list)
+    for entry in results:
+        by_url[entry["url"]].append(entry)
+
+    merged: list[dict] = []
+    for url, visits in by_url.items():
+        # Sort by visit_time ascending
+        visits.sort(key=lambda v: v["visit_time"])
+
+        cluster = [visits[0]]
+        for visit in visits[1:]:
+            gap = (visit["visit_time"] - cluster[-1]["visit_time"]).total_seconds()
+            if gap <= window_seconds:
+                cluster.append(visit)
+            else:
+                merged.append(_merge_cluster(cluster))
+                cluster = [visit]
+        merged.append(_merge_cluster(cluster))
+
+    # Restore original descending order
+    merged.sort(key=lambda v: v["visit_time"], reverse=True)
+    return merged
+
+
+def _merge_cluster(cluster: list[dict]) -> dict:
+    """Merge a cluster of rapid re-visits into a single entry."""
+    base = dict(cluster[0])
+    base["duration_seconds"] = sum(v["duration_seconds"] for v in cluster)
+    base["visit_count"] = max(v["visit_count"] for v in cluster)
+    return base
 
 
 def _should_exclude(url: str, exclude_domains: set[str]) -> bool:

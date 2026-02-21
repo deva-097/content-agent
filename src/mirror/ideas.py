@@ -10,19 +10,29 @@ from src.common.logger import get_logger
 LOGGER = get_logger(__name__)
 
 _SYSTEM = """\
-You help a professional in AI, SaaS strategy, and management consulting \
-generate content ideas from their recent reading patterns."""
+You help a writer who thinks across domains — connecting sci-fi to AI policy, \
+strategy frameworks to personal experience, tech trends to cultural history. \
+Their voice is reflective and analytical, not prescriptive. They write essays \
+that draw unexpected parallels, not listicles or thought-leadership posts."""
 
 _PROMPT = """\
-Based on this person's recent productive browsing, suggest 3-5 content ideas \
-they could write about. Each idea should include:
-- A working title
-- The angle or hook (1 sentence)
-- Which readings inspired it
+Look at this reading list and find 3-5 surprising connections across different \
+pieces. The best ideas come from noticing a thread that links two unrelated \
+readings, or from a personal reaction ("this reminded me of..." or "this \
+contradicts what I assumed about...").
+
+Each idea should include:
+- A working title (specific and curious, not generic)
+- The angle: what unexpected connection or personal reflection makes this worth writing (1-2 sentences)
+- Which readings inspired it (at least 2 from different domains)
+
+Do NOT suggest: listicles, "X things every leader should know", trend roundups, \
+or anything that reads like a LinkedIn post. Every idea should have a genuine \
+point of view, not just summarise a topic.
 
 Respond as a JSON array with keys: "title", "angle", "inspired_by"
 
-Recent productive reading:
+Recent reading:
 {reading_list}"""
 
 

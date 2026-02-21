@@ -71,10 +71,8 @@ launchd runs missed jobs when the machine wakes from sleep.
 - Re-run the one-time audit (`audit.py`) after removing the top 50 domains from the exclusion list. Substack articles and HackerNews offshoots are likely being filtered out — verify these show up in the productive reading category.
 - Currently Mirror reads article *titles/URLs only* (not full article text) when generating content ideas. Full-text scraping would improve idea quality but increases cost significantly. A middle ground: scrape article text only for URLs classified as "productive" (keeps cost low, improves signal).
 
-**Tab-switching noise in time audit:**
-- Chrome records a "visit" every time a tab is focused, not just on first open. This inflates visit counts and duration for always-open tabs (e.g., Gmail, Slack, docs you reference repeatedly).
-- Potential fixes: cap max duration per single visit (e.g., 30 min), deduplicate rapid re-visits within a short window (e.g., ignore re-opens within 5 min), or weight by active interaction time rather than raw visit count.
+**Tab-switching noise in time audit:** ✅ Fixed
+- Visit duration capped at 30 min. Rapid re-visits to the same URL within 5 min are merged into a single entry.
 
-**Tone and content direction:**
-- Mirror's content ideas currently skew toward LinkedIn/consulting angles ("LinkedIn lunatic" territory). The goal is for Mirror to be more reflective — surfacing deeper connections across reading, identifying recurring themes, and prompting genuine thinking rather than content-marketing framings.
-- Update the prompt templates in `src/mirror/ideas.py` to emphasize reflection, intellectual connections, and personal insight over professional positioning.
+**Tone and content direction:** ✅ Fixed
+- Prompts rewritten to produce reflective, cross-domain essay ideas instead of LinkedIn-style content marketing.
