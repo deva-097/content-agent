@@ -59,20 +59,6 @@ launchd runs missed jobs when the machine wakes from sleep.
 
 ~$1/month with default settings.
 
-## Next Steps
+## Roadmap
 
-### Testing
-- Write practical tests for each agent (Scout fetch+score, Mirror classify+audit, Scribe draft generation).
-- Run end-to-end to catch regressions — current `tests/` directory is empty.
-
-### Mirror Agent Improvements
-
-**Coverage gaps:**
-- Re-run the one-time audit (`audit.py`) after removing the top 50 domains from the exclusion list. Substack articles and HackerNews offshoots are likely being filtered out — verify these show up in the productive reading category.
-- Currently Mirror reads article *titles/URLs only* (not full article text) when generating content ideas. Full-text scraping would improve idea quality but increases cost significantly. A middle ground: scrape article text only for URLs classified as "productive" (keeps cost low, improves signal).
-
-**Tab-switching noise in time audit:** ✅ Fixed
-- Visit duration capped at 30 min. Rapid re-visits to the same URL within 5 min are merged into a single entry.
-
-**Tone and content direction:** ✅ Fixed
-- Prompts rewritten to produce reflective, cross-domain essay ideas instead of LinkedIn-style content marketing.
+See [GitHub Issues](https://github.com/deva-097/content-agent/issues) for planned improvements and new agents.
