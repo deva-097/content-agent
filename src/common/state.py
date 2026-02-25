@@ -44,6 +44,18 @@ CREATE TABLE IF NOT EXISTS content_ideas (
     created_at TEXT NOT NULL,
     used INTEGER DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS compass_ideas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    idea TEXT NOT NULL,
+    format TEXT,
+    status TEXT NOT NULL DEFAULT 'backlog',
+    target_date TEXT,
+    tags TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
 """
 
 
