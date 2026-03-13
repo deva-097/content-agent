@@ -15,6 +15,7 @@ SCHEDULES=(
     "scout-wed scout 3 19 scout-wed"
     "scout-sat scout 6 9 scout-sat"
     "mirror mirror 6 10 mirror"
+    "tuner tuner 1 11 tuner"
 )
 
 echo "Installing content-agent schedules..."
@@ -52,5 +53,6 @@ echo "Schedules installed:"
 echo "  Scout (Wed 7 PM)   — ${PREFIX}.scout-wed"
 echo "  Scout (Sat 9 AM)   — ${PREFIX}.scout-sat"
 echo "  Mirror (Sat 10 AM) — ${PREFIX}.mirror"
+echo "  Tuner (Mon 11 AM)  — ${PREFIX}.tuner"
 echo ""
 echo "Verify with: launchctl list | grep content-agent"

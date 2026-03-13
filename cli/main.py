@@ -25,6 +25,15 @@ def scout(dry_run: bool):
 
 
 @cli.command()
+@click.option("--dry-run", is_flag=True, help="Print digest instead of emailing")
+def tuner(dry_run: bool):
+    """Run the Tuner agent (weekly podcast digest)."""
+    from src.tuner.agent import run_tuner
+
+    run_tuner(dry_run=dry_run)
+
+
+@cli.command()
 @click.option("--dry-run", is_flag=True, help="Print report instead of emailing")
 def mirror(dry_run: bool):
     """Run the Mirror agent (Chrome history analyzer)."""

@@ -10,7 +10,7 @@ from src.common.llm import LLMClient
 from src.common.logger import get_logger
 from src.common.state import StateDB
 
-from .analyzer import generate_time_audit
+from .analyzer import generate_reading_list, generate_time_audit
 from .chrome import read_history
 from .classifier import classify_entries
 from .formatter import format_report
@@ -48,7 +48,7 @@ def run_mirror(*, dry_run: bool = False) -> None:
         LOGGER.info("Classified %d URLs", len(classifications))
 
         # 3. Generate time audit (pure Python)
-        audit = generate_time_audit(entries, classifications)
+        audit = generate_time_audit(entries, classifications, config=config)
         LOGGER.info(
             "Time audit: %.1fh productive, %.1fh neutral, %.1fh waste",
             audit["time_by_category"].get("productive", 0),
@@ -56,30 +56,34 @@ def run_mirror(*, dry_run: bool = False) -> None:
             audit["time_by_category"].get("waste", 0),
         )
 
-        # 4. Generate content ideas from productive reading
+        # 4. Generate reading list (pure Python, no LLM)
+        reading_list = generate_reading_list(entries, config)
+        LOGGER.info("Reading list: %d articles", len(reading_list))
+
+        # 5. Generate content ideas from productive reading
         ideas = generate_ideas(entries, classifications, llm, model=model)
 
-        # 5. Save ideas to state DB
+        # 6. Save ideas to state DB
         for idea in ideas:
             context = idea.get("inspired_by", "")
             if isinstance(context, list):
                 context = ", ".join(str(c) for c in context)
             state.save_content_idea("mirror", idea["title"], str(context))
 
-        # 6. Format + send report
+        # 7. Format + send report
         cost = llm.estimate_session_cost()
-        html = format_report(audit, ideas=ideas, cost=cost)
+        html = format_report(audit, ideas=ideas, cost=cost, reading_list=reading_list)
 
         if dry_run:
             LOGGER.info("[DRY RUN] Would send Mirror report")
-            _print_dry_run(audit, ideas, cost)
+            _print_dry_run(audit, ideas, cost, reading_list)
         else:
             send_html_email(
                 subject=f"[Mirror] Browsing Report — {date.today()}",
                 html_body=html,
             )
 
-        # 7. Mark URLs as processed
+        # 8. Mark URLs as processed
         for entry in entries:
             category = classifications.get(entry["url"], "neutral")
             state.mark_url_processed(
@@ -106,26 +110,26 @@ def run_mirror(*, dry_run: bool = False) -> None:
         state.close()
 
 
-def _print_dry_run(audit: dict, ideas: list[dict], cost: float) -> None:
+def _print_dry_run(
+    audit: dict, ideas: list[dict], cost: float, reading_list: list[dict] | None = None
+) -> None:
     """Print a console-friendly version of the report."""
     print(f"\n{'='*60}")
     print(f"MIRROR — BROWSING REPORT — {date.today()}")
     print(f"{'='*60}")
 
-    print(f"\nTotal: {audit['total_entries']} visits, {audit['total_hours']:.1f}h")
-    for cat in ("productive", "neutral", "waste"):
-        hours = audit["time_by_category"].get(cat, 0)
-        pct = (hours / audit["total_hours"] * 100) if audit["total_hours"] > 0 else 0
-        print(f"  {cat:12s}: {hours:5.1f}h ({pct:.0f}%)")
+    print(f"\n{audit['total_entries']} page visits · API cost: ${cost:.4f}")
 
-    print("\nTop domains:")
-    for domain, hours, cat in audit["top_domains"][:10]:
-        print(f"  {domain:30s} {hours:5.1f}h  [{cat}]")
+    if audit.get("distraction_summary"):
+        print("\nDistractions:")
+        for domain, hours in audit["distraction_summary"].items():
+            print(f"  {domain}: {hours:.1f}h")
 
-    if audit["waste_highlights"]:
-        print("\nTime sinks:")
-        for item in audit["waste_highlights"][:5]:
-            print(f"  {item['duration_minutes']:5.1f}min  {item['domain']} — {item.get('title', '')[:50]}")
+    if reading_list:
+        print(f"\nReading List ({len(reading_list)} articles):")
+        for item in reading_list[:20]:
+            print(f"  [{item['domain']}] {item['title'][:70]}")
+            print(f"    {item['url'][:80]}")
 
     if ideas:
         print("\nContent ideas:")
@@ -133,4 +137,4 @@ def _print_dry_run(audit: dict, ideas: list[dict], cost: float) -> None:
             print(f"  - {idea['title']}")
             print(f"    {idea.get('angle', '')}")
 
-    print(f"\nAPI cost this run: ${cost:.4f}")
+    print()

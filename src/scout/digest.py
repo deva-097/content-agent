@@ -1,102 +1,144 @@
-"""LLM-based summarization and relevance scoring for Scout entries."""
+"""Filter and pick Scout entries — no relevance scoring, random selection."""
 
 from __future__ import annotations
 
 import json
+import random
+import re
 
 from src.common.llm import LLMClient, HAIKU
 from src.common.logger import get_logger
-from src.common.scraper import fetch_url
 
 LOGGER = get_logger(__name__)
 
-_SYSTEM_PROMPT = """\
-You are a content research assistant for a professional building thought leadership \
-in AI, SaaS strategy, and management consulting.
+_PAYWALL_DOMAINS = {
+    "nytimes.com", "theatlantic.com", "ft.com", "economist.com",
+    "newyorker.com", "wsj.com", "bloomberg.com", "washingtonpost.com",
+    "thetimes.co.uk",
+}
 
-Your job is to evaluate articles for relevance and provide concise summaries."""
+_LISTICLE_RE = re.compile(
+    r"^(\d+\s+(best|ways|things|tips|reasons|ideas|steps|tricks)|(top|best)\s+\d+)",
+    re.IGNORECASE,
+)
 
-_BATCH_PROMPT_TEMPLATE = """\
-Evaluate the following articles. For each one, provide:
-1. A 2-3 sentence summary
-2. A relevance score from 1-5 (5 = highly relevant for AI/strategy/consulting thought leadership)
-3. A brief note on why it matters (1 sentence)
+_POLITICS_SYSTEM = "You are a content filter. Respond only with valid JSON."
 
-If the article text is empty or unintelligible, score it 1.
+_POLITICS_PROMPT = """\
+Below is a list of articles. Return a JSON object with key "exclude" whose value is a list \
+of 0-based indices for articles that are PRIMARILY about US electoral politics, political parties, \
+or current geopolitical events (wars, elections, sanctions).
 
-Respond as a JSON array with objects having keys: "index", "summary", "score", "why_it_matters"
+Do NOT exclude articles about political philosophy, political theory, or historical politics.
 
 Articles:
-{articles}"""
+{articles}
+
+Respond only with: {{"exclude": [list of integer indices]}}"""
+
+_WHY_SYSTEM = "You are a concise editorial guide for a curious, intellectually broad reader."
+
+_WHY_PROMPT = """\
+For each article below, write one sentence explaining why a curious, intellectually broad reader \
+would want to read it. Focus on what makes it interesting or surprising, not just its topic.
+
+Articles:
+{articles}
+
+Respond as a JSON array: [{{"index": 0, "why": "..."}}, ...]"""
 
 
-def _prepare_article_text(entry: dict) -> str:
-    """Get article text — use RSS summary if available, otherwise fetch."""
-    if entry.get("summary") and len(entry["summary"]) > 200:
-        return entry["summary"][:3000]
-
-    # Try fetching the full article
-    if entry.get("url"):
-        content = fetch_url(entry["url"])
-        if content:
-            return content[:3000]  # Cap at ~3000 chars to limit tokens
-
-    return entry.get("summary", "") or entry.get("title", "")
+def _is_paywalled(url: str) -> bool:
+    return any(domain in url for domain in _PAYWALL_DOMAINS)
 
 
-def summarize_and_score(
+def _is_listicle(title: str) -> bool:
+    return bool(_LISTICLE_RE.match(title.strip()))
+
+
+def filter_and_pick(
     llm: LLMClient,
     entries: list[dict],
     model: str = HAIKU,
-    min_score: int = 3,
-    batch_size: int = 10,
+    count: int = 5,
 ) -> list[dict]:
-    """Summarize entries in batches and return those scoring >= min_score."""
+    """Filter entries and return up to `count` with a why_read field."""
     if not entries:
         return []
 
-    scored_entries = []
+    # Stage 1 — Python filters (no LLM)
+    filtered = []
+    for e in entries:
+        if _is_paywalled(e.get("url", "")):
+            LOGGER.debug("Paywall skip: %s", e.get("url"))
+            continue
+        if _is_listicle(e.get("title", "")):
+            LOGGER.debug("Listicle skip: %s", e.get("title"))
+            continue
+        filtered.append(e)
 
-    for i in range(0, len(entries), batch_size):
-        batch = entries[i : i + batch_size]
+    LOGGER.info("After Python filters: %d entries (from %d)", len(filtered), len(entries))
 
-        # Build article text for the batch
-        articles_text = ""
-        for idx, entry in enumerate(batch):
-            text = _prepare_article_text(entry)
-            articles_text += f"\n---\nArticle {idx + 1}: \"{entry['title']}\"\nSource: {entry.get('source_label', 'Unknown')}\nURL: {entry['url']}\nText: {text[:2000]}\n"
+    if not filtered:
+        return []
 
-        prompt = _BATCH_PROMPT_TEMPLATE.format(articles=articles_text)
-
-        try:
-            response = llm.complete(prompt, system=_SYSTEM_PROMPT, model=model, max_tokens=2048)
-
-            # Parse JSON from response
-            json_start = response.find("[")
-            json_end = response.rfind("]") + 1
-            if json_start >= 0 and json_end > json_start:
-                scores = json.loads(response[json_start:json_end])
-            else:
-                LOGGER.warning("Could not parse JSON from LLM response, skipping batch")
-                continue
-
-            for score_entry in scores:
-                idx = score_entry.get("index", 0) - 1  # 1-indexed to 0-indexed
-                if 0 <= idx < len(batch) and score_entry.get("score", 0) >= min_score:
-                    entry = batch[idx].copy()
-                    entry["llm_summary"] = score_entry.get("summary", "")
-                    entry["relevance_score"] = score_entry.get("score", 0)
-                    entry["why_it_matters"] = score_entry.get("why_it_matters", "")
-                    scored_entries.append(entry)
-
-        except (json.JSONDecodeError, KeyError) as e:
-            LOGGER.warning("Failed to parse LLM scoring response: %s", e)
-        except Exception as e:
-            LOGGER.error("LLM scoring failed for batch: %s", e)
-
-    scored_entries.sort(key=lambda x: x.get("relevance_score", 0), reverse=True)
-    LOGGER.info(
-        "Scored %d entries, %d passed threshold (>= %d)",
-        len(entries), len(scored_entries), min_score,
+    # Stage 2 — LLM politics filter (one batch call)
+    articles_text = "\n".join(
+        f"{i}. \"{e['title']}\" — {(e.get('summary') or '')[:200]}"
+        for i, e in enumerate(filtered)
     )
-    return scored_entries
+    try:
+        response = llm.complete(
+            _POLITICS_PROMPT.format(articles=articles_text),
+            system=_POLITICS_SYSTEM,
+            model=model,
+            max_tokens=512,
+        )
+        j_start = response.find("{")
+        j_end = response.rfind("}") + 1
+        if j_start >= 0 and j_end > j_start:
+            exclude_indices = set(json.loads(response[j_start:j_end]).get("exclude", []))
+        else:
+            exclude_indices = set()
+    except Exception as e:
+        LOGGER.warning("Politics filter failed, skipping: %s", e)
+        exclude_indices = set()
+
+    filtered = [e for i, e in enumerate(filtered) if i not in exclude_indices]
+    LOGGER.info("After politics filter: %d entries", len(filtered))
+
+    if not filtered:
+        return []
+
+    # Stage 3 — Random sample
+    picked = random.sample(filtered, min(count, len(filtered)))
+
+    # Stage 4 — "Why read this" (one batch call for all picked)
+    articles_text = "\n".join(
+        f"{i}. \"{e['title']}\" — {(e.get('summary') or '')[:200]}"
+        for i, e in enumerate(picked)
+    )
+    try:
+        response = llm.complete(
+            _WHY_PROMPT.format(articles=articles_text),
+            system=_WHY_SYSTEM,
+            model=model,
+            max_tokens=512,
+        )
+        j_start = response.find("[")
+        j_end = response.rfind("]") + 1
+        if j_start >= 0 and j_end > j_start:
+            why_list = json.loads(response[j_start:j_end])
+            for item in why_list:
+                idx = item.get("index")
+                if idx is not None and 0 <= idx < len(picked):
+                    picked[idx] = {**picked[idx], "why_read": item.get("why", "")}
+    except Exception as e:
+        LOGGER.warning("Why-read generation failed: %s", e)
+
+    # Ensure every picked entry has a why_read field
+    for i, e in enumerate(picked):
+        if "why_read" not in e:
+            picked[i] = {**e, "why_read": ""}
+
+    return picked

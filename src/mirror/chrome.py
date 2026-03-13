@@ -67,7 +67,8 @@ def read_history(
                 u.title,
                 u.visit_count,
                 v.visit_time,
-                v.visit_duration
+                v.visit_duration,
+                v.transition
             FROM urls u
             JOIN visits v ON u.id = v.url
             WHERE v.visit_time > ?
@@ -76,12 +77,14 @@ def read_history(
         rows = conn.execute(query, (chrome_since,)).fetchall()
         conn.close()
 
-        # Filter out excluded domains
+        # Filter out excluded domains and audit-excluded domains
         exclude = set(config["mirror"].get("exclude_domains", []))
+        exclude_audit = set(config["mirror"].get("excluded_from_audit", []))
+        all_exclude = exclude | exclude_audit
         results = []
         for row in rows:
             url = row["url"]
-            if _should_exclude(url, exclude):
+            if _should_exclude(url, all_exclude):
                 continue
 
             visit_time = chrome_time_to_datetime(row["visit_time"])
@@ -98,6 +101,7 @@ def read_history(
                 "visit_time": visit_time,
                 "duration_seconds": duration_secs,
                 "domain": urlparse(url).netloc,
+                "transition_type": row["transition"] or 0,
             })
 
         results = _deduplicate_rapid_visits(results)
@@ -158,6 +162,11 @@ def _merge_cluster(cluster: list[dict]) -> dict:
     base["duration_seconds"] = sum(v["duration_seconds"] for v in cluster)
     base["visit_count"] = max(v["visit_count"] for v in cluster)
     return base
+
+
+def _get_transition_core(transition_type: int) -> int:
+    """Return the core transition type (lower 8 bits), stripping qualifier flags."""
+    return transition_type & 0xFF
 
 
 def _should_exclude(url: str, exclude_domains: set[str]) -> bool:

@@ -1,14 +1,14 @@
 # content-agent
 
-Personal content pipeline with three agents: **Scout** (discover), **Mirror** (analyze), **Scribe** (draft).
+Personal content pipeline with four agents: **Scout** (discover), **Mirror** (analyze), **Scribe** (draft), **Tuner** (podcasts).
 
 Built for personal brand building across an Astro blog and LinkedIn.
 
 ## Agents
 
-**Scout** — Scans RSS feeds + web for relevant content, emails a curated digest.
+**Scout** — Picks 5 broad intellectual reads (history, philosophy, culture) from curated RSS sources, emails a digest with a one-sentence "why read" per item.
 - Schedule: Wednesday 7 PM + Saturday 9 AM
-- Model: Haiku (~$0.05/run)
+- Model: Haiku (~$0.003/run)
 
 **Mirror** — Reads Chrome browsing history, classifies URLs, generates a time audit and content ideas.
 - Schedule: Saturday 10 AM
@@ -17,6 +17,10 @@ Built for personal brand building across an Astro blog and LinkedIn.
 **Scribe** — Generates blog post or LinkedIn drafts, saves to Obsidian for review.
 - On-demand via CLI
 - Model: Sonnet (~$0.03/draft)
+
+**Tuner** — Scans 12 followed podcast RSS feeds and emails a digest of every episode published in the past 7 days. One batch LLM call generates a 2-sentence summary per episode (what it's about + who should listen / skip). Grouped by show. Replaces manually opening podcast apps to decide what to queue.
+- Schedule: Monday 11 AM
+- Model: Haiku (~$0.006/run)
 
 ## Setup
 
@@ -35,6 +39,7 @@ python -m cli.main mirror --dry-run
 python -m cli.main scribe "AI agents replacing SaaS" --type blog
 python -m cli.main scribe "Why RAG still matters" --type linkedin --context "Counter the 'RAG is dead' narrative"
 python -m cli.main scribe --from-ideas --type blog
+python -m cli.main tuner --dry-run
 
 # Utilities
 python -m cli.main status    # Last run times

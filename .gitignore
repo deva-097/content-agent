@@ -35,3 +35,6 @@ launchd/*.plist
 
 # Claude
 .claude/
+
+# Local planning notes
+PLANNED_IMPROVEMENTS.md
