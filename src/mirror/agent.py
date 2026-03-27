@@ -8,6 +8,7 @@ from src.common.config import load_config
 from src.common.email import send_html_email
 from src.common.llm import LLMClient
 from src.common.logger import get_logger
+from src.common.run_log import append_mirror_run
 from src.common.state import StateDB
 
 from .analyzer import generate_reading_list, generate_time_audit
@@ -15,6 +16,7 @@ from .chrome import read_history
 from .classifier import classify_entries
 from .formatter import format_report
 from .ideas import generate_ideas
+from .summarizer import generate_week_summary
 
 LOGGER = get_logger(__name__)
 
@@ -56,34 +58,40 @@ def run_mirror(*, dry_run: bool = False) -> None:
             audit["time_by_category"].get("waste", 0),
         )
 
-        # 4. Generate reading list (pure Python, no LLM)
-        reading_list = generate_reading_list(entries, config)
+        # 4. Generate reading list (productive only, no LLM)
+        reading_list = generate_reading_list(entries, config, classifications=classifications)
         LOGGER.info("Reading list: %d articles", len(reading_list))
 
-        # 5. Generate content ideas from productive reading
+        # 5. Generate week summary narrative
+        week_summary = generate_week_summary(audit, llm, model=model)
+
+        # 6. Generate content ideas from productive reading
         ideas = generate_ideas(entries, classifications, llm, model=model)
 
-        # 6. Save ideas to state DB
+        # 7. Save ideas to state DB
         for idea in ideas:
             context = idea.get("inspired_by", "")
             if isinstance(context, list):
                 context = ", ".join(str(c) for c in context)
             state.save_content_idea("mirror", idea["title"], str(context))
 
-        # 7. Format + send report
+        # 8. Format + send report
         cost = llm.estimate_session_cost()
-        html = format_report(audit, ideas=ideas, cost=cost, reading_list=reading_list)
+        html = format_report(audit, ideas=ideas, cost=cost, reading_list=reading_list, week_summary=week_summary)
 
         if dry_run:
             LOGGER.info("[DRY RUN] Would send Mirror report")
-            _print_dry_run(audit, ideas, cost, reading_list)
+            _print_dry_run(audit, ideas, cost, reading_list, week_summary=week_summary)
         else:
             send_html_email(
                 subject=f"[Mirror] Browsing Report — {date.today()}",
                 html_body=html,
             )
 
-        # 8. Mark URLs as processed
+        # Append to persistent log regardless of dry_run
+        append_mirror_run(audit, reading_list or [], week_summary or "", cost)
+
+        # 9. Mark URLs as processed
         for entry in entries:
             category = classifications.get(entry["url"], "neutral")
             state.mark_url_processed(
@@ -111,7 +119,11 @@ def run_mirror(*, dry_run: bool = False) -> None:
 
 
 def _print_dry_run(
-    audit: dict, ideas: list[dict], cost: float, reading_list: list[dict] | None = None
+    audit: dict,
+    ideas: list[dict],
+    cost: float,
+    reading_list: list[dict] | None = None,
+    week_summary: str | None = None,
 ) -> None:
     """Print a console-friendly version of the report."""
     print(f"\n{'='*60}")
@@ -124,6 +136,10 @@ def _print_dry_run(
         print("\nDistractions:")
         for domain, hours in audit["distraction_summary"].items():
             print(f"  {domain}: {hours:.1f}h")
+
+    if week_summary:
+        print("\nWeek in Review:")
+        print(f"  {week_summary}")
 
     if reading_list:
         print(f"\nReading List ({len(reading_list)} articles):")

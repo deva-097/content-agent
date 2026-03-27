@@ -8,6 +8,7 @@ from src.common.config import load_config
 from src.common.email import send_html_email
 from src.common.llm import LLMClient
 from src.common.logger import get_logger
+from src.common.run_log import append_scout_run
 from src.common.state import StateDB
 
 from .digest import filter_and_pick
@@ -88,6 +89,9 @@ def run_scout(*, dry_run: bool = False) -> None:
                 subject=f"[Scout] 5 Reads — {date.today()}",
                 html_body=html,
             )
+
+        # Append to persistent log regardless of dry_run
+        append_scout_run(picked, cost)
 
         # 6. Mark picked entries as processed
         for item in picked:

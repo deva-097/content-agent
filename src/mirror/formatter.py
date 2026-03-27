@@ -29,6 +29,7 @@ _REPORT_TEMPLATE = Template("""\
   .idea-title { font-weight: 600; font-size: 15px; }
   .idea-angle { font-size: 14px; color: #57534e; margin: 2px 0; }
   .idea-source { font-size: 12px; color: #a8a29e; }
+  .summary { font-size: 14px; line-height: 1.7; color: #44403c; margin: 8px 0; }
   .footer { margin-top: 40px; font-size: 12px; color: #a8a29e; border-top: 1px solid #e7e5e4; padding-top: 12px; }
 </style>
 </head>
@@ -44,6 +45,11 @@ _REPORT_TEMPLATE = Template("""\
 <span class="distraction-item"><span class="distraction-domain">{{ domain }}</span>: {{ "%.1f"|format(hours) }}h</span>
 {% endfor %}
 </div>
+{% endif %}
+
+{% if week_summary %}
+<h2>Week in Review</h2>
+<p class="summary">{{ week_summary }}</p>
 {% endif %}
 
 {% if reading_list %}
@@ -79,6 +85,7 @@ def format_report(
     ideas: list[dict] | None = None,
     cost: float | None = None,
     reading_list: list[dict] | None = None,
+    week_summary: str | None = None,
 ) -> str:
     """Render the Mirror browsing report as HTML."""
     return _REPORT_TEMPLATE.render(
@@ -87,4 +94,5 @@ def format_report(
         ideas=ideas or [],
         cost=cost,
         reading_list=reading_list or [],
+        week_summary=week_summary or "",
     )

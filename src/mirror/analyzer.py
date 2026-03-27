@@ -111,18 +111,25 @@ def generate_time_audit(
     }
 
 
-def generate_reading_list(entries: list[dict], config: dict) -> list[dict]:
+def generate_reading_list(
+    entries: list[dict],
+    config: dict,
+    classifications: dict[str, str] | None = None,
+) -> list[dict]:
     """Return articles the user actually clicked on and read.
 
     Filters to link-clicks (transition_core 0) and typed URLs (transition_core 1),
     excluding waste/audit-excluded domains and entries with trivial titles.
+    If classifications provided, only includes productive URLs.
     """
     mirror_cfg = config.get("mirror", {})
     excluded = set(
         mirror_cfg.get("exclude_domains", [])
         + mirror_cfg.get("excluded_from_audit", [])
         + mirror_cfg.get("waste_domains", [])
+        + mirror_cfg.get("reading_list_exclude", [])
     )
+    url_patterns = mirror_cfg.get("reading_list_exclude_url_patterns", [])
 
     seen_urls: set[str] = set()
     reading_list: list[dict] = []
@@ -139,6 +146,10 @@ def generate_reading_list(entries: list[dict], config: dict) -> list[dict]:
         if not title or len(title) <= 10:
             continue
 
+        # Skip non-productive URLs when classifications are available
+        if classifications and classifications.get(url, "neutral") != "productive":
+            continue
+
         # Skip excluded domains
         skip = False
         for pattern in excluded:
@@ -146,6 +157,10 @@ def generate_reading_list(entries: list[dict], config: dict) -> list[dict]:
                 skip = True
                 break
         if skip:
+            continue
+
+        # Skip transactional/utility URL patterns
+        if any(p in url for p in url_patterns):
             continue
 
         if url in seen_urls:
