@@ -71,8 +71,10 @@ def scribe(topic, content_type, context, notes, from_ideas):
 
 
 @cli.command()
-def status():
-    """Show last run times and stats for all agents."""
+@click.option("--last", default=5, type=int, help="Number of recent runs to show per agent")
+def status(last: int):
+    """Show run history, costs, and stats for all agents."""
+    import json
     from src.common.state import StateDB
 
     with StateDB() as db:
@@ -81,18 +83,51 @@ def status():
             click.echo("No agent runs recorded yet.")
             return
 
-        # Show latest run per agent
-        seen = set()
+        # Group runs by agent
+        by_agent: dict[str, list[dict]] = {}
         for run in runs:
             name = run["agent_name"]
-            if name in seen:
-                continue
-            seen.add(name)
-            click.echo(
-                f"  {name:8s} | {run['status']:10s} | "
-                f"started {run['run_start'][:19]} | "
-                f"ended {(run['run_end'] or 'running')[:19]}"
-            )
+            by_agent.setdefault(name, []).append(run)
+
+        total_cost = 0.0
+        total_runs = 0
+
+        for agent_name in sorted(by_agent):
+            agent_runs = by_agent[agent_name][:last]
+            click.echo(f"\n  {agent_name.upper()}")
+            click.echo(f"  {'─' * 60}")
+            for run in agent_runs:
+                summary = {}
+                if run["summary"]:
+                    try:
+                        summary = json.loads(run["summary"])
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+                cost = summary.get("estimated_cost_usd", 0)
+                total_cost += cost
+                total_runs += 1
+
+                # Build a compact notes string from summary keys
+                notes_parts = []
+                for key in ("articles_picked", "items_found", "total_entries", "drafts_created"):
+                    if key in summary:
+                        label = key.replace("_", " ")
+                        notes_parts.append(f"{summary[key]} {label}")
+                notes_str = " · ".join(notes_parts) if notes_parts else ""
+
+                date_str = run["run_start"][:10]
+                status_icon = "+" if run["status"] == "completed" else "x" if run["status"] == "failed" else "~"
+                cost_str = f"${cost:.4f}" if cost else "  --"
+
+                line = f"  {status_icon} {date_str}  {cost_str:>8s}"
+                if notes_str:
+                    line += f"  {notes_str}"
+                click.echo(line)
+
+        click.echo(f"\n  {'─' * 60}")
+        click.echo(f"  Total: {total_runs} runs | ${total_cost:.4f}")
+        click.echo()
 
 
 @cli.command()

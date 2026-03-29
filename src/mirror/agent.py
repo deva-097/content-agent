@@ -63,7 +63,7 @@ def run_mirror(*, dry_run: bool = False) -> None:
         LOGGER.info("Reading list: %d articles", len(reading_list))
 
         # 5. Generate week summary narrative
-        week_summary = generate_week_summary(audit, llm, model=model)
+        week_summary = generate_week_summary(audit, llm, model=model, config=config)
 
         # 6. Generate content ideas from productive reading
         ideas = generate_ideas(entries, classifications, llm, model=model)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from src.common.llm import LLMClient, HAIKU
 from src.common.logger import get_logger
 
@@ -24,10 +26,25 @@ github.com → building something, hbr.org → thinking through a strategy probl
 Be brief and conversational. Don't list every domain — synthesise into a narrative."""
 
 
+def _load_persona(config: dict) -> str:
+    """Read the persona file if configured. Returns empty string on failure."""
+    persona_path = config.get("mirror", {}).get("persona_file", "")
+    if not persona_path:
+        return ""
+    try:
+        text = Path(persona_path).expanduser().read_text()
+        LOGGER.info("Loaded persona context from %s", persona_path)
+        return text
+    except Exception as e:
+        LOGGER.warning("Could not read persona file %s: %s", persona_path, e)
+        return ""
+
+
 def generate_week_summary(
     audit: dict,
     llm: LLMClient,
     model: str = HAIKU,
+    config: dict | None = None,
 ) -> str:
     """Return a 1-2 paragraph narrative summary of the week's browsing."""
     top_domains = audit.get("top_domains", [])
@@ -46,10 +63,23 @@ def generate_week_summary(
 
     domain_lines = "\n".join(lines)
 
+    # Build system prompt, optionally enriched with persona context
+    persona = _load_persona(config or {})
+    if persona:
+        system = (
+            _SYSTEM
+            + "\n\nHere is context about the person whose browsing you are summarising. "
+            "Use it to make your summary more specific and grounded — reference their "
+            "actual work, interests, and goals where relevant:\n\n"
+            + persona
+        )
+    else:
+        system = _SYSTEM
+
     try:
         summary = llm.complete(
             _PROMPT.format(domain_lines=domain_lines),
-            system=_SYSTEM,
+            system=system,
             model=model,
             max_tokens=300,
         )

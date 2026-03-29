@@ -35,11 +35,17 @@ def fetch_rss_entries(
         if since and published and published <= since:
             continue
 
+        # Grab full content if available (Substack, rich show notes)
+        content_full = ""
+        if hasattr(entry, "content") and entry.content:
+            content_full = entry.content[0].get("value", "")
+
         entries.append({
             "title": entry.get("title", "Untitled"),
             "url": entry.get("link", ""),
             "published": published,
             "summary": entry.get("summary", ""),
+            "content": content_full,
             "source_type": "rss",
         })
 

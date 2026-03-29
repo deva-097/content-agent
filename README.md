@@ -1,6 +1,6 @@
 # content-agent
 
-Personal content pipeline with four agents: **Scout** (discover), **Mirror** (analyze), **Scribe** (draft), **Tuner** (podcasts).
+Personal content pipeline with five agents: **Scout** (discover), **Mirror** (analyze), **Scribe** (draft), **Compass** (ideas), **Tuner** (podcasts + newsletters).
 
 Built for personal brand building across an Astro blog and LinkedIn.
 
@@ -18,9 +18,9 @@ Built for personal brand building across an Astro blog and LinkedIn.
 - On-demand via CLI
 - Model: Sonnet (~$0.03/draft)
 
-**Tuner** — Scans 12 followed podcast RSS feeds and emails a digest of every episode published in the past 7 days. One batch LLM call generates a 2-sentence summary per episode (what it's about + who should listen / skip). Grouped by show. Replaces manually opening podcast apps to decide what to queue.
+**Tuner** — Weekly digest of podcasts (15 feeds) and newsletters (3 feeds). Two-tier output: standard 2-sentence blurbs for all items, plus deep digest (key takeaways, memorable quotes, data points) for selected sources. Must-read/must-listen flagging personalized via persona context. Replaces manually scanning podcast apps and newsletter inboxes.
 - Schedule: Monday 11 AM
-- Model: Haiku (~$0.006/run)
+- Model: Haiku (~$0.04/run)
 
 ## Setup
 
