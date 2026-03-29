@@ -66,4 +66,4 @@ launchd runs missed jobs when the machine wakes from sleep.
 
 ## Roadmap
 
-See [GitHub Issues](https://github.com/deva-097/content-agent/issues) for planned improvements and new agents.
+See `PLANNED_IMPROVEMENTS.md` for open items, decisions, and completed work.
