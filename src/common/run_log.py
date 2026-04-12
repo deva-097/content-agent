@@ -81,6 +81,47 @@ def append_mirror_run(
         f.write("\n".join(lines))
 
 
+def append_tuner_run(
+    all_items: list[dict],
+    cost: float,
+) -> None:
+    """Append a Tuner run's highlights to data/tuner_log.md."""
+    if not all_items:
+        return
+
+    lines = [f"\n## {date.today()}\n"]
+
+    # Must-reads first
+    must_reads = [item for item in all_items if item.get("must_read")]
+    if must_reads:
+        lines.append("**Must read/listen:**")
+        for item in must_reads:
+            kind = item.get("kind", "podcast")
+            icon = "🎙" if kind == "podcast" else "📝"
+            title = item.get("title", "Untitled")
+            source = item.get("source_label", "?")
+            reason = item.get("must_read_reason", "")
+            lines.append(f"- {icon} **{title}** ({source})")
+            if reason:
+                lines.append(f"  → {reason}")
+        lines.append("")
+
+    # Counts
+    deep_count = len([i for i in all_items if i.get("deep")])
+    podcast_count = len([i for i in all_items if i.get("kind") == "podcast"])
+    newsletter_count = len([i for i in all_items if i.get("kind") == "newsletter"])
+    lines.append(
+        f"*{len(all_items)} items ({podcast_count} podcasts, {newsletter_count} newsletters)"
+        f"{f', {deep_count} deep digests' if deep_count else ''}"
+        f" · Cost: ${cost:.4f}*\n"
+    )
+
+    log_file = _log_path("tuner_log.md")
+    _ensure_header(log_file, "# Tuner Log\n\nWeekly digest highlights, most recent first.\n")
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+
 def _ensure_header(path: Path, header: str) -> None:
     """Write header to file if it doesn't exist yet."""
     if not path.exists():

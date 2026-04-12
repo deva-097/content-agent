@@ -12,6 +12,7 @@ from src.common.config import load_config
 from src.common.email import send_html_email
 from src.common.llm import LLMClient, HAIKU
 from src.common.logger import get_logger
+from src.common.run_log import append_tuner_run
 from src.common.state import StateDB
 from src.scout.sources import fetch_all_sources
 
@@ -353,6 +354,9 @@ def run_tuner(*, dry_run: bool = False) -> None:
                 subject=f"[Tuner] Weekly Digest — {date.today()}",
                 html_body=html,
             )
+
+        # 8. Append to persistent log
+        append_tuner_run(all_items, cost=cost)
 
         summary = {
             "items_found": len(all_items),
