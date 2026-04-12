@@ -7,7 +7,7 @@ Built for personal brand building across an Astro blog and LinkedIn.
 ## Agents
 
 **Scout** — Picks 5 broad intellectual reads (history, philosophy, culture) from curated RSS sources, emails a digest with a one-sentence "why read" per item.
-- Schedule: Wednesday 7 PM + Saturday 9 AM
+- Schedule: **Paused** (launchd agents unloaded 2026-04-05). To re-enable: `bash launchd/install.sh`
 - Model: Haiku (~$0.003/run)
 
 **Mirror** — Reads Chrome browsing history, classifies URLs, generates a time audit and content ideas.
