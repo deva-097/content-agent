@@ -131,15 +131,21 @@ def generate_reading_list(
     )
     url_patterns = mirror_cfg.get("reading_list_exclude_url_patterns", [])
 
-    seen_urls: set[str] = set()
+    max_items = mirror_cfg.get("reading_list_max_items", 50)
+    seen_keys: set[str] = set()  # (domain, path) — ignores query params
     reading_list: list[dict] = []
 
     for entry in entries:
+        url = entry.get("url", "")
+
+        # Skip local file URLs (screenshots, downloads opened in browser)
+        if url.startswith("file://"):
+            continue
+
         transition_core = _get_transition_core(entry.get("transition_type", 0))
         if transition_core not in (0, 1):
             continue
 
-        url = entry.get("url", "")
         title = entry.get("title", "")
         domain = entry.get("domain", "")
 
@@ -163,9 +169,13 @@ def generate_reading_list(
         if any(p in url for p in url_patterns):
             continue
 
-        if url in seen_urls:
+        # Deduplicate by (domain, path) — strips query params so
+        # revisiting the same page with different UTM/back params doesn't repeat
+        parsed = urlparse(url)
+        dedup_key = (parsed.netloc, parsed.path)
+        if dedup_key in seen_keys:
             continue
-        seen_urls.add(url)
+        seen_keys.add(dedup_key)
 
         reading_list.append({
             "title": title,
@@ -175,4 +185,4 @@ def generate_reading_list(
         })
 
     reading_list.sort(key=lambda x: x["visit_time"] or 0, reverse=True)
-    return reading_list
+    return reading_list[:max_items]

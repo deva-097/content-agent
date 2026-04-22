@@ -122,6 +122,32 @@ def append_tuner_run(
         f.write("\n".join(lines))
 
 
+def append_weekly_brief_run(sections: dict, cost: float) -> None:
+    """Append a Weekly Brief run to data/weekly_brief_log.md."""
+    lines = [f"\n## {date.today()}\n"]
+
+    labels = {
+        "time_audit": "Time Audit",
+        "task_accountability": "Task Accountability",
+        "consulting_pulse": "Consulting Pulse",
+        "week_in_the_machine": "Week in the Machine",
+        "upgrade_suggestion": "One Upgrade",
+        "honest_call": "The Honest Call",
+    }
+
+    for key, label in labels.items():
+        text = sections.get(key, "").strip()
+        if text:
+            lines.append(f"**{label}:** {text}\n")
+
+    lines.append(f"*Cost: ${cost:.4f}*\n")
+
+    log_file = _log_path("weekly_brief_log.md")
+    _ensure_header(log_file, "# Weekly Brief Log\n\nAll weekly briefs, most recent last.\n")
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+
 def _ensure_header(path: Path, header: str) -> None:
     """Write header to file if it doesn't exist yet."""
     if not path.exists():

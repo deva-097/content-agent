@@ -70,6 +70,15 @@ def scribe(topic, content_type, context, notes, from_ideas):
     )
 
 
+@cli.command("weekly-brief")
+@click.option("--dry-run", is_flag=True, help="Print brief instead of emailing")
+def weekly_brief(dry_run: bool):
+    """Run the Stevens agent (weekly advisor brief)."""
+    from src.weekly_brief.agent import run_weekly_brief
+
+    run_weekly_brief(dry_run=dry_run)
+
+
 @cli.command()
 @click.option("--last", default=5, type=int, help="Number of recent runs to show per agent")
 def status(last: int):

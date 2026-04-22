@@ -50,7 +50,7 @@ def generate_ideas(
     ]
 
     if not productive:
-        LOGGER.info("No productive entries to generate ideas from")
+        LOGGER.warning("No productive entries found — ideas skipped (total entries: %d)", len(entries))
         return []
 
     # Deduplicate by title, keep most recent
@@ -75,17 +75,22 @@ def generate_ideas(
             _PROMPT.format(reading_list=reading_list),
             system=_SYSTEM,
             model=model,
-            max_tokens=1024,
+            max_tokens=2048,
         )
 
         json_start = response.find("[")
         json_end = response.rfind("]") + 1
-        if json_start >= 0 and json_end > json_start:
-            ideas = json.loads(response[json_start:json_end])
-            LOGGER.info("Generated %d content ideas from browsing history", len(ideas))
-            return ideas
+        if json_start < 0 or json_end <= json_start:
+            LOGGER.warning("Ideas: LLM returned no JSON array. Response: %s", response[:200])
+            return []
 
+        ideas = json.loads(response[json_start:json_end])
+        LOGGER.info("Generated %d content ideas from browsing history", len(ideas))
+        return ideas
+
+    except json.JSONDecodeError as e:
+        LOGGER.warning("Ideas: JSON parse failed — %s", e)
     except Exception as e:
-        LOGGER.warning("Failed to generate ideas: %s", e)
+        LOGGER.exception("Ideas: unexpected error — %s", e)
 
     return []
