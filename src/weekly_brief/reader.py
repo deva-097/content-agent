@@ -85,11 +85,27 @@ def read_cos_tasks(config: dict) -> dict[str, Any]:
 
 
 def read_file(path_str: str) -> str:
-    """Read a file and return its contents."""
-    p = _resolve_path(path_str)
-    if not p.exists():
-        LOGGER.warning("File not found: %s", p)
-        return ""
+    """Read a file and return its contents.
+
+    If path_str contains a glob (*), pick the lexicographically latest match —
+    works for date-stamped filenames like CONTEXT_FOR_CLAUDE_AI_UPDATED_2026-04-28_v4_3.md.
+    """
+    if "*" in path_str:
+        pattern_path = Path(path_str).expanduser()
+        if pattern_path.is_absolute():
+            base, pattern = pattern_path.parent, pattern_path.name
+        else:
+            base, pattern = get_project_root(), path_str
+        matches = sorted(base.glob(pattern))
+        if not matches:
+            LOGGER.warning("No files matching glob: %s", path_str)
+            return ""
+        p = matches[-1]
+    else:
+        p = _resolve_path(path_str)
+        if not p.exists():
+            LOGGER.warning("File not found: %s", p)
+            return ""
     return p.read_text(encoding="utf-8")
 
 
